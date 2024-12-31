@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Grading Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        .container {
+            margin: 20px auto;
+            max-width: 800px;
+            padding: 10px;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f4f4f4;
+            border: 1px solid #ccc;
+        }
+        canvas {
+            display: block;
+            margin: 10px auto;
+            border: 1px solid #ccc;
+        }
+        .contact-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script> <!-- QR Scanning Library -->
+</head>
+<body>
+    <header>
+        <h1>Quiz Grading Application</h1>
+    </header>
+    <div class="container">
+        <div id="g_id_onload"
+             data-client_id="YOUR_GOOGLE_CLIENT_ID"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="true">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-size="large"
+             data-theme="outline"
+             data-text="sign_in_with"
+             data-shape="rectangular"
+             data-logo_alignment="left">
+        </div>
+        <div class="section">
+            <h2>Scan QR Code</h2>
+            <video id="camera" width="400" autoplay></video>
+            <button onclick="startScan()">Start Scanning</button>
+            <div id="scanOutput" class="output"></div>
+        </div>
+        <div class="section">
+            <h2>Create QR Code</h2>
+            <input type="text" id="qrText" placeholder="Enter text for QR code">
+            <button onclick="generateQRCode()">Generate QR Code</button>
+            <canvas id="qrCanvas" width="200" height="200"></canvas>
+        </div>
+        <div class="section">
+            <h2>Input Correct Answers</h2>
+            <textarea id="correctAnswers" rows="5" cols="50" placeholder="Enter correct answers (comma-separated)"></textarea>
+            <button onclick="saveAnswers()">Save Answers</button>
+            <div id="answersOutput" class="output"></div>
+        </div>
+        <div class="contact-info">
+            <p>Contact Information:</p>
+            <p>Phone: 0879332636</p>
+            <p>Facebook: <a href="https://www.facebook.com/yourprofile" target="_blank">Your Facebook Profile</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Handle Google Sign-In
+        function handleCredentialResponse(response) {
+            console.log('Encoded JWT ID token: ' + response.credential);
+            alert('Welcome! Google Sign-In successful.');
+        }
+
+        // QR Code Scanner
+        const video = document.getElementById('camera');
+        const scanOutput = document.getElementById('scanOutput');
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        let scanning = false;
+
+        function startScan() {
+            console.log('Attempting to start QR code scan.');
+            if (scanning) return; // Prevent multiple starts
+            scanning = true;
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then((stream) => {
+                    console.log('Camera stream started successfully.');
+                    video.srcObject = stream;
+                    video.play();
+                    scanQRCode();
+                })
+                .catch((err) => {
+                    console.error('Error accessing camera:', err);
+                    scanOutput.innerText = `Error: ${err.message}`;
+                    scanning = false;
+                });
+        }
+
+        function scanQRCode() {
+            if (!scanning) return;
+
+            // Draw the current video frame to the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+            if (code) {
+                console.log('QR Code detected:', code.data);
+                scanOutput.innerText = `QR Code Data: ${code.data}`;
+                stopScan();
+            } else {
+                requestAnimationFrame(scanQRCode); // Keep scanning
+            }
+        }
+
+        function stopScan() {
+            scanning = false;
+            video.srcObject.getTracks().forEach(track => track.stop()); // Stop the camera stream
+        }
+
+        // QR Code Generator
+        const qrCanvas = document.getElementById('qrCanvas');
+        function generateQRCode() {
+            const qrText = document.getElementById('qrText').value;
+            console.log('Generating QR code for text:', qrText);
+            QRCode.toCanvas(qrCanvas, qrText, { width: 200, height: 200 }, (error) => {
+                if (error) {
+                    console.error('Error generating QR code:', error);
+                } else {
+                    console.log('QR code generated successfully.');
+                }
+            });
+        }
+
+        // Save Correct Answers
+        function saveAnswers() {
+            const correctAnswers = document.getElementById('correctAnswers').value;
+            console.log('Saving correct answers:', correctAnswers);
+            localStorage.setItem('correctAnswers', correctAnswers);
+            document.getElementById('answersOutput').innerText = 'Answers saved successfully!';
+            console.log('Correct answers saved to localStorage.');
+        }
+    </script>
+</body>
+</html>
